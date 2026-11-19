@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>ビンゴ番号抽選</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #e9f0f6;
+      --panel: #ffffff;
+      --ink: #1d2b4a;
+      --ink-soft: #5a6785;
+      --chip: #dfe7f0;
+      --face: #ffffff;
+      --ball: #d7263d;
+      --ball-light: #f0707e;
+      --ball-dark: #8f1424;
+      --latest: #f5b700;
+      --double: #7a4fd6;
+      --reach: #e8336b;
+      --reach-dark: #b31d4f;
+      --machine: #2e64c8;
+      --machine-light: #5d8fe6;
+      --machine-dark: #1d4594;
+      --dome: rgba(255, 255, 255, 0.5);
+      --dome-edge: #b8c7db;
+      --metal-light: #ffffff;
+      --metal: #c9d1dc;
+      --metal-dark: #8390a4;
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #16203a;
+        --panel: #1f2b4a;
+        --ink: #eef2f8;
+        --ink-soft: #a9b4cc;
+        --chip: #2c3a5e;
+        --double: #a585ff;
+        --dome: rgba(255, 255, 255, 0.14);
+        --dome-edge: #50618a;
+        color-scheme: dark;
+      }
+    }
+
+    :root[data-theme="dark"] {
+        --bg: #16203a;
+        --panel: #1f2b4a;
+        --ink: #eef2f8;
+        --ink-soft: #a9b4cc;
+        --chip: #2c3a5e;
+        --double: #a585ff;
+        --dome: rgba(255, 255, 255, 0.14);
+        --dome-edge: #50618a;
+        color-scheme: dark;
+      }
+
+    :root {
+      box-sizing: border-box;
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    html {
+      height: 100%;
+      scroll-padding-top: env(safe-area-inset-top, 0px);
+      background: var(--bg);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", "Meiryo", sans-serif;
+      font-weight: 500;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+
+    /* 左：ガチャガチャ / 右端：出た番号の一覧 */
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      min-height: 100%;
+    }
+
+    .stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.25rem;
+      padding: 2rem 1rem;
+    }
+
+    /* ---------- ガチャガチャ本体 ---------- */
+    .machine {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .dome {
+      position: relative;
+      z-index: 1;
+      width: 200px;
+      aspect-ratio: 1;
+      margin-bottom: -40px;
+      border-radius: 50%;
+      border: 4px solid var(--dome-edge);
+      background: radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.95), var(--dome) 42%);
+      overflow: hidden;
+    }
+    .pile {
+      position: absolute;
+      inset: 0;
+    }
+    .pile span {
+      --c: #d7263d; /* 既定の色。HTML側の style="--c:..." で1つずつ上書きする */
+      position: absolute;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(to bottom, var(--c) 50%, #ffffff 50%);
+      box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.15);
+    }
+    .cabinet {
+      position: relative;
+      z-index: 2;
+      width: 240px;
+      height: 230px;
+      padding-top: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border-radius: 24px 24px 14px 14px;
+      background: linear-gradient(to bottom, var(--machine-light), var(--machine) 16%, var(--machine-dark));
+      box-shadow: 0 18px 26px -14px rgba(20, 40, 90, 0.6);
+    }
+    .handle-form { margin: 0; }
+
+    /* ハンドル（このボタンを押すとガチャが回る） */
+    .handle {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.25rem 0.75rem 0.4rem;
+      border: none;
+      border-radius: 18px;
+      background: none;
+      color: #ffffff;
+      font: inherit;
+      font-weight: 800;
+      font-size: 1rem;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .handle:focus-visible { outline: 3px solid var(--latest); outline-offset: 2px; }
+    .handle:disabled { cursor: not-allowed; }
+    /* 回している最中は押せないが、見た目は薄くしない（50個出終わったときだけ薄くする） */
+    .handle:disabled:not(.is-turning) { opacity: 0.45; }
+    .knob-area {
+      position: relative;
+      width: 128px;
+      height: 128px;
+      display: grid;
+      place-items: center;
+    }
+    .turn-arrow {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0.55;
+    }
+    .knob {
+      width: 88px;
+      height: 88px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: radial-gradient(circle at 36% 30%, var(--metal-light), var(--metal) 55%, var(--metal-dark));
+      box-shadow: 0 4px 0 rgba(0, 0, 0, 0.28), inset 0 -4px 6px rgba(0, 0, 0, 0.18);
+      transition: transform 200ms ease;
+    }
+    .handle:not(:disabled):hover .knob { transform: rotate(20deg); }
+    .grip {
+      width: 76px;
+      height: 24px;
+      border-radius: 12px;
+      background: linear-gradient(to bottom, #ffffff, var(--metal) 55%, var(--metal-dark));
+      box-shadow: 0 3px 4px rgba(0, 0, 0, 0.32);
+    }
+    .outlet {
+      margin-top: auto;
+      margin-bottom: 16px;
+      width: 96px;
+      height: 54px;
+      border-radius: 14px 14px 10px 10px;
+      background: #0f1c38;
+      box-shadow: inset 0 6px 10px rgba(0, 0, 0, 0.6);
+      overflow: hidden;
+    }
+    .outlet::before {
+      content: "";
+      display: block;
+      height: 20px;
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    /* 2倍に当たったときに一瞬出る表示 */
+    .double-flash {
+      position: absolute;
+      z-index: 5;
+      top: 64px;
+      left: 0;
+      right: 0;
+      width: max-content;
+      margin: 0 auto;
+      padding: 0.35rem 1.4rem 0.45rem;
+      border-radius: 999px;
+      background: var(--double);
+      color: #ffffff;
+      text-align: center;
+      line-height: 1.2;
+      box-shadow: 0 10px 22px -8px rgba(60, 20, 140, 0.6);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .double-flash strong { display: block; font-size: 2.2rem; font-weight: 800; }
+    .double-flash span { font-size: 0.95rem; font-weight: 800; }
+
+    /* ---------- 出てきた玉 ---------- */
+    .result {
+      min-height: 250px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.9rem;
+    }
+    .balls {
+      display: flex;
+      align-items: flex-end;
+      gap: 1.5rem;
+    }
+    .slot {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .ball-wrap {
+      position: relative;
+      width: 180px;
+      aspect-ratio: 1;
+    }
+    .slot-second .ball-wrap { width: 128px; }
+    .ball {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: radial-gradient(circle at 32% 28%, var(--ball-light), var(--ball) 55%, var(--ball-dark));
+      box-shadow: 0 16px 26px -12px rgba(143, 20, 36, 0.55);
+    }
+    .ball.is-empty { filter: grayscale(0.85); opacity: 0.5; }
+    .ball-face {
+      width: 62%;
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--face);
+      color: #1d2b4a;
+      font-size: 4rem;
+      font-weight: 800;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .slot-second .ball-face { font-size: 2.8rem; }
+
+    /* 2個出たときの順番（1個目が優先） */
+    .order-badge {
+      position: absolute;
+      z-index: 2;
+      top: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      margin: 0;
+      padding: 0.15rem 0.8rem;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .slot-first .order-badge {
+      background: var(--double);
+      color: #ffffff;
+    }
+    .slot-second .order-badge {
+      background: var(--panel);
+      color: var(--double);
+      box-shadow: inset 0 0 0 2px var(--double);
+    }
+    .priority-note {
+      max-width: 22rem;
+      margin: 0;
+      padding: 0.5rem 1rem;
+      border-radius: 12px;
+      background: var(--panel);
+      color: var(--ink);
+      font-size: 0.95rem;
+      text-align: center;
+      box-shadow: inset 0 0 0 2px var(--double);
+    }
+    .priority-note strong { color: var(--double); }
+
+    /* 演出中にまだ出していない玉・表示は隠しておく */
+    .slot.is-pending .ball,
+    .slot.is-pending .order-badge,
+    .priority-note.is-pending { opacity: 0; }
+
+    .capsule {
+      --cap: #f5b700; /* 既定の色。回すたびにJavaScriptで上書きする */
+      position: absolute;
+      z-index: 3;
+      top: 15%;
+      left: 15%;
+      width: 70%;
+      height: 70%;
+      pointer-events: none;
+    }
+    .capsule-top,
+    .capsule-bottom {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 50%;
+    }
+    .capsule-top {
+      top: 0;
+      border-radius: 999px 999px 0 0;
+      background: radial-gradient(circle at 32% 40%, rgba(255, 255, 255, 0.55), transparent 40%), var(--cap);
+    }
+    .capsule-bottom {
+      bottom: 0;
+      border-radius: 0 0 999px 999px;
+      background: linear-gradient(to bottom, #ffffff, #dce3ec);
+      border-top: 3px solid rgba(0, 0, 0, 0.1);
+    }
+
+    /* ---------- リーチ中の帯 ---------- */
+    .reach-band {
+      position: fixed;
+      z-index: 50;
+      width: 560px;
+      height: 48px;
+      display: none;
+      align-items: center;
+      overflow: hidden;
+      background: linear-gradient(to bottom, var(--reach), var(--reach-dark));
+      border-top: 3px solid rgba(255, 255, 255, 0.7);
+      border-bottom: 3px solid rgba(255, 255, 255, 0.7);
+      color: #ffffff;
+      font-size: 1.2rem;
+      font-weight: 800;
+      box-shadow: 0 8px 18px -6px rgba(120, 10, 50, 0.55);
+      pointer-events: none;
+    }
+    .reach-band.top-right {
+      top: 40px;
+      right: -194px;
+      transform: rotate(45deg);
+    }
+    .reach-band.bottom-left {
+      bottom: 40px;
+      left: -194px;
+      transform: rotate(45deg);
+    }
+    body.is-reach .reach-band {
+      display: flex;
+      animation: band-in 400ms ease-out;
+    }
+    .reach-track {
+      display: flex;
+      flex-shrink: 0;
+      white-space: nowrap;
+      animation: reach-flow 7s linear infinite;
+    }
+    .reach-track span { padding: 0 1.2rem; }
+    @keyframes reach-flow {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+    @keyframes band-in {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .reach-track { animation: none; }
+      body.is-reach .reach-band { animation: none; }
+    }
+
+    /* ---------- 出た番号の一覧 ---------- */
+    .history {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      padding: 1.5rem 1.25rem;
+      background: var(--panel);
+      border-left: 1px solid var(--chip);
+    }
+    .history h1 {
+      margin: 0;
+      font-size: 1.3rem;
+      font-weight: 800;
+    }
+    #history-dynamic {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .progress { margin: 0; color: var(--ink-soft); }
+    .progress strong { color: var(--ink); font-size: 1.4rem; }
+    .notice { margin: 0; font-weight: 800; }
+    .history h2 {
+      margin: 0.75rem 0 0.25rem;
+      font-size: 1.05rem;
+    }
+    .history h2 small { color: var(--ink-soft); font-weight: 500; }
+    .history-empty { margin: 0; color: var(--ink-soft); font-size: 0.95rem; }
+    .history-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.6rem;
+    }
+    .history-list li {
+      position: relative;
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--chip);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+    .history-list li.is-latest {
+      background: var(--latest);
+      color: #1d2b4a;
+    }
+    /* 2倍で同時に出た番号：紫の枠と、出た順の小さな数字 */
+    .history-list li[data-order] { box-shadow: inset 0 0 0 3px var(--double); }
+    .history-list li[data-order]::after {
+      content: attr(data-order);
+      position: absolute;
+      top: -5px;
+      left: -5px;
+      width: 19px;
+      height: 19px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--double);
+      color: #ffffff;
+      font-size: 0.7rem;
+      line-height: 1;
+    }
+    .history-legend {
+      margin: 0.25rem 0 0;
+      color: var(--ink-soft);
+      font-size: 0.85rem;
+    }
+
+    .controls {
+      margin-top: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .controls form { margin: 0; }
+    .controls button {
+      width: 100%;
+      padding: 0.7rem 1rem;
+      border: none;
+      border-radius: 999px;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .controls button:focus-visible { outline: 3px solid var(--latest); outline-offset: 3px; }
+    .controls button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-reach {
+      background: transparent;
+      color: var(--reach);
+      box-shadow: inset 0 0 0 2px var(--reach);
+      font-size: 1.05rem;
+    }
+    .btn-reach[aria-pressed="true"] {
+      background: var(--reach);
+      color: #ffffff;
+    }
+    .btn-reset {
+      background: transparent;
+      box-shadow: inset 0 0 0 2px var(--chip);
+      color: var(--ink-soft);
+    }
+
+    /* スマホでは一覧を下に回し、ガチャと玉を少し小さくする */
+    @media (max-width: 720px) {
+      .layout { grid-template-columns: 1fr; }
+      .stage { padding: 1rem 0.75rem 1.5rem; gap: 0.5rem; justify-content: flex-start; }
+      .machine-scale { transform: scale(0.8); transform-origin: top center; margin-bottom: -78px; }
+      .result { min-height: 210px; }
+      .ball-wrap { width: 150px; }
+      .slot-second .ball-wrap { width: 106px; }
+      .ball-face { font-size: 3.3rem; }
+      .slot-second .ball-face { font-size: 2.3rem; }
+      .history { border-left: none; border-top: 1px solid var(--chip); }
+      .reach-band { width: 440px; }
+      .reach-band.top-right { top: 46px; right: -160px; }
+      .reach-band.bottom-left { bottom: 46px; left: -160px; }
+    }
+
+    /* スマホ横画面：ガチャ・玉・一覧を横一列に並べ、スクロールなしで1画面に収める */
+    @media (orientation: landscape) and (max-height: 520px) {
+      html, body { overflow: hidden; }
+      .layout {
+        grid-template-columns: 1fr 260px;
+        grid-template-rows: minmax(0, 1fr);
+        height: 100%;
+        min-height: 0;
+      }
+      .stage {
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        gap: 1.5rem;
+        padding: 0.5rem 1rem;
+        padding-left: max(1rem, env(safe-area-inset-left, 0px));
+      }
+      .machine-scale {
+        transform: scale(0.72);
+        transform-origin: center;
+        margin: -55px -34px;
+      }
+      .result { min-height: 0; }
+      .ball-wrap { width: 150px; }
+      .slot-second .ball-wrap { width: 106px; }
+      .ball-face { font-size: 3.3rem; }
+      .slot-second .ball-face { font-size: 2.3rem; }
+      .priority-note { max-width: 17rem; padding: 0.4rem 0.75rem; font-size: 0.85rem; }
+      .history {
+        min-height: 0;
+        overflow-y: auto;
+        gap: 0.5rem;
+        padding: 0.75rem 0.9rem 0;
+        padding-right: max(0.9rem, env(safe-area-inset-right, 0px));
+        border-top: none;
+        border-left: 1px solid var(--chip);
+      }
+      .history h1 { font-size: 1.05rem; }
+      .progress strong { font-size: 1.15rem; }
+      .history h2 { margin: 0.25rem 0 0; font-size: 0.95rem; }
+      .history-list { grid-template-columns: repeat(6, 1fr); gap: 0.4rem; }
+      .history-list li { font-size: 0.85rem; }
+      .history-list li[data-order]::after { top: -4px; left: -4px; width: 15px; height: 15px; font-size: 0.6rem; }
+      .history-legend { font-size: 0.75rem; }
+      .controls {
+        position: sticky;
+        bottom: 0;
+        flex-direction: row;
+        gap: 0.5rem;
+        padding: 0.6rem 0 0.75rem;
+        background: var(--panel);
+      }
+      .controls button { flex: 1; padding: 0.55rem 0.4rem; font-size: 0.95rem; white-space: nowrap; }
+      .reach-band { width: 440px; height: 40px; font-size: 1rem; }
+      .reach-band.top-right { top: 12px; right: -157px; }
+      .reach-band.bottom-left { bottom: 12px; left: -157px; }
+    }
+
+    /* 横画面でも幅の狭い機種（iPhone SE など）は、玉と一覧を一回り小さくする */
+    @media (orientation: landscape) and (max-height: 520px) and (max-width: 740px) {
+      .layout { grid-template-columns: 1fr 220px; }
+      .stage { gap: 0.75rem; }
+      .ball-wrap { width: 120px; }
+      .slot-second .ball-wrap { width: 88px; }
+      .ball-face { font-size: 2.6rem; }
+      .slot-second .ball-face { font-size: 1.9rem; }
+      .balls { gap: 1rem; }
+      .history-list { grid-template-columns: repeat(5, 1fr); }
+      .controls button { font-size: 0.85rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="reach-band top-right" aria-hidden="true">
+  <div class="reach-track">
+    <span>リーチ中</span><span>リーチ中</span><span>リーチ中</span><span>リーチ中</span>
+    <span>リーチ中</span><span>リーチ中</span><span>リーチ中</span><span>リーチ中</span>
+  </div>
+</div>
+<div class="reach-band bottom-left" aria-hidden="true">
+  <div class="reach-track">
+    <span>リーチ中</span><span>リーチ中</span><span>リーチ中</span><span>リーチ中</span>
+    <span>リーチ中</span><span>リーチ中</span><span>リーチ中</span><span>リーチ中</span>
+  </div>
+</div>
+
+<div class="layout">
+
+  <main class="stage">
+    <div class="machine-scale">
+      <div class="machine" id="machine">
+        <div class="dome">
+          <div class="pile" id="pile" aria-hidden="true">
+            <span style="--c:#d7263d; left:14px;  bottom:22px; transform:rotate(25deg)"></span>
+            <span style="--c:#f5b700; left:52px;  bottom:12px; transform:rotate(-40deg)"></span>
+            <span style="--c:#2bb673; left:92px;  bottom:8px;  transform:rotate(70deg)"></span>
+            <span style="--c:#7a5cd6; left:132px; bottom:14px; transform:rotate(-15deg)"></span>
+            <span style="--c:#2e64c8; left:148px; bottom:52px; transform:rotate(110deg)"></span>
+            <span style="--c:#ff8a3d; left:30px;  bottom:60px; transform:rotate(-80deg)"></span>
+            <span style="--c:#2bb673; left:70px;  bottom:50px; transform:rotate(15deg)"></span>
+            <span style="--c:#d7263d; left:110px; bottom:48px; transform:rotate(-120deg)"></span>
+            <span style="--c:#f5b700; left:90px;  bottom:88px; transform:rotate(60deg)"></span>
+            <span style="--c:#7a5cd6; left:50px;  bottom:96px; transform:rotate(-30deg)"></span>
+          </div>
+        </div>
+
+        <div class="cabinet">
+          <button type="button" id="handle" class="handle">
+            <span class="knob-area" aria-hidden="true">
+              <svg class="turn-arrow" viewBox="0 0 128 128">
+                <path d="M 108.4 26.7 A 58 58 0 0 1 108.4 101.3" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+                <path d="M 120.2 98.1 L 108.4 101.3 L 109.4 89.1" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span class="knob" id="knob"><span class="grip"></span></span>
+            </span>
+            <span>ガチャを回す</span>
+          </button>
+          <div class="outlet" id="outlet" aria-hidden="true"></div>
+        </div>
+
+        <p class="double-flash" id="double-flash" aria-hidden="true">
+          <strong>2倍！</strong><span>2個出ます</span>
+        </p>
+      </div>
+    </div>
+
+    <div class="result" id="result"></div>
+
+    <p class="sr-only" id="status" aria-live="polite"></p>
+  </main>
+
+  <aside class="history">
+    <h1>ビンゴ 1〜50</h1>
+    <div id="history-dynamic"></div>
+    <div class="controls">
+      <button type="button" class="btn-reach" id="reach-button" aria-pressed="false">リーチ</button>
+      <button type="button" class="btn-reset" id="reset-button">リセット</button>
+    </div>
+  </aside>
+
+</div>
+
+<script>
+  (function () {
+    // ---------- 抽選のルール（Java版の BingoService と同じ） ----------
+    const MIN_NUMBER = 1;
+    const MAX_NUMBER = 50;
+    const DOUBLE_CHANCE_DENOMINATOR = 10; // 2倍の当選確率 1/10
+    const MAX_MISS_STREAK = 9;            // 9回連続で外れたら、次は必ず2倍
+    const STORAGE_KEY = 'bingo-state-v1';
+
+    function freshState() {
+      const remaining = [];
+      for (let n = MIN_NUMBER; n <= MAX_NUMBER; n++) {
+        remaining.push(n);
+      }
+      // rounds：ガチャを回した1回ごとに出た番号（1個か2個。2個のときは出た順）
+      return { remaining: remaining, rounds: [], missStreak: 0, reach: false };
+    }
+
+    // 端末に保存した状態を読み込む（画面を閉じても続きから再開できる）
+    function loadState() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (saved && Array.isArray(saved.remaining) && Array.isArray(saved.rounds)
+            && typeof saved.missStreak === 'number' && typeof saved.reach === 'boolean') {
+          return saved;
+        }
+      } catch (error) {
+        // 読み込めないときは最初から始める
+      }
+      return freshState();
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (error) {
+        // 保存できない環境（プライベートブラウズなど）でも、抽選自体はそのまま続けられる
+      }
+    }
+
+    let state = loadState();
+
+    const randomInt = (bound) => Math.floor(Math.random() * bound);
+
+    // ガチャを1回回す。通常は1個、2倍に当たったら2個（出た順に並ぶ）
+    function draw() {
+      if (state.remaining.length === 0) {
+        return [];
+      }
+      const isDouble = state.missStreak >= MAX_MISS_STREAK
+          || randomInt(DOUBLE_CHANCE_DENOMINATOR) === 0;
+      state.missStreak = isDouble ? 0 : state.missStreak + 1;
+      // 残りが1個しかないときは、2倍に当たっても1個だけ出す
+      const count = (isDouble && state.remaining.length >= 2) ? 2 : 1;
+
+      const round = [];
+      for (let i = 0; i < count; i++) {
+        const index = randomInt(state.remaining.length);
+        round.push(state.remaining.splice(index, 1)[0]);
+      }
+      state.rounds.push(round);
+      saveState();
+      return round;
+    }
+
+    const drawnCount = () => state.rounds.reduce((sum, round) => sum + round.length, 0);
+    const isFinished = () => state.remaining.length === 0;
+    const lastRound = () => state.rounds.length ? state.rounds[state.rounds.length - 1] : [];
+
+    // ---------- 画面の組み立て ----------
+    const handle = document.getElementById('handle');
+    const reachButton = document.getElementById('reach-button');
+    const resetButton = document.getElementById('reset-button');
+    const machine = document.getElementById('machine');
+    const pile = document.getElementById('pile');
+    const knob = document.getElementById('knob');
+    const outlet = document.getElementById('outlet');
+    const doubleFlash = document.getElementById('double-flash');
+    const result = document.getElementById('result');
+    const historyArea = document.getElementById('history-dynamic');
+    const status = document.getElementById('status');
+
+    function resultHtml(round) {
+      if (round.length === 0) {
+        return '<div class="balls"><div class="slot slot-first"><div class="ball-wrap">'
+            + '<div class="ball is-empty"><div class="ball-face"><span>?</span></div></div>'
+            + '</div></div></div>';
+      }
+      const isDouble = round.length === 2;
+      const slots = round.map((n, i) => {
+        const badge = isDouble
+            ? '<p class="order-badge">' + (i === 0 ? '1個目（優先）' : '2個目') + '</p>'
+            : '';
+        return '<div class="slot ' + (i === 0 ? 'slot-first' : 'slot-second') + '">' + badge
+            + '<div class="ball-wrap"><div class="ball"><div class="ball-face">'
+            + '<span class="ball-number">' + n + '</span></div></div></div></div>';
+      }).join('');
+      const note = isDouble
+          ? '<p class="priority-note">同時にビンゴになったときは、<strong>1個目</strong>の番号でビンゴになった人が優先です。</p>'
+          : '';
+      return '<div class="balls">' + slots + '</div>' + note;
+    }
+
+    function renderHistory() {
+      let html = '<p class="progress"><strong>' + drawnCount() + '</strong> / <span>'
+          + (MAX_NUMBER - MIN_NUMBER + 1) + '</span> 個 出ました</p>';
+      if (isFinished()) {
+        html += '<p class="notice">50個すべて出ました。リセットすると最初からやり直せます。</p>';
+      }
+      html += '<h2>出た番号 <small>（出た順）</small></h2>';
+      if (state.rounds.length === 0) {
+        html += '<p class="history-empty">まだ番号は出ていません。ガチャを回すとここに並びます。</p>';
+      } else {
+        html += '<ol class="history-list">';
+        state.rounds.forEach((round, r) => {
+          const latest = r === state.rounds.length - 1 ? ' class="is-latest"' : '';
+          round.forEach((n, i) => {
+            const order = round.length === 2 ? ' data-order="' + (i + 1) + '"' : '';
+            html += '<li' + latest + order + '>' + n + '</li>';
+          });
+        });
+        html += '</ol>';
+      }
+      if (state.rounds.some((round) => round.length === 2)) {
+        html += '<p class="history-legend">紫の枠は2倍で同時に出た番号です。左上の数字は出た順で、1が優先です。</p>';
+      }
+      historyArea.innerHTML = html;
+    }
+
+    function renderReach() {
+      document.body.classList.toggle('is-reach', state.reach);
+      reachButton.setAttribute('aria-pressed', String(state.reach));
+      reachButton.textContent = state.reach ? 'リーチを解除' : 'リーチ';
+    }
+
+    function renderAll() {
+      result.innerHTML = resultHtml(lastRound());
+      renderHistory();
+      renderReach();
+      handle.disabled = isFinished();
+    }
+
+    // ---------- 演出 ----------
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const capsuleColors = ['#f5b700', '#2bb673', '#7a5cd6', '#ff8a3d', '#2e64c8', '#e84a8a'];
+    const TURN_MS = 2400;
+    const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    // ハンドルを「ガチャ、ガチャ」と2段階で1回転させ、本体と中の玉を揺らす
+    function turnHandle() {
+      const knobTurn = knob.animate([
+        { transform: 'rotate(0deg)', offset: 0, easing: 'ease-in-out' },
+        { transform: 'rotate(180deg)', offset: 0.4 },
+        { transform: 'rotate(180deg)', offset: 0.5, easing: 'ease-in-out' },
+        { transform: 'rotate(360deg)', offset: 0.9 },
+        { transform: 'rotate(360deg)', offset: 1 }
+      ], { duration: TURN_MS });
+
+      machine.animate([
+        { transform: 'none', offset: 0 },
+        { transform: 'none', offset: 0.38 },
+        { transform: 'translateY(3px) rotate(-1.2deg)', offset: 0.42 },
+        { transform: 'none', offset: 0.5 },
+        { transform: 'none', offset: 0.88 },
+        { transform: 'translateY(3px) rotate(1.2deg)', offset: 0.92 },
+        { transform: 'none', offset: 1 }
+      ], { duration: TURN_MS });
+
+      pile.animate([
+        { transform: 'rotate(0deg) translateY(0)' },
+        { transform: 'rotate(-6deg) translateY(-6px)' },
+        { transform: 'rotate(5deg) translateY(-2px)' },
+        { transform: 'rotate(-3deg) translateY(-5px)' },
+        { transform: 'rotate(0deg) translateY(0)' }
+      ], { duration: TURN_MS / 2, iterations: 2, easing: 'ease-in-out' });
+
+      return knobTurn.finished;
+    }
+
+    // 2倍に当たったことを知らせる
+    function showDoubleFlash() {
+      return doubleFlash.animate([
+        { transform: 'scale(0.4)', opacity: 0, offset: 0 },
+        { transform: 'scale(1.15)', opacity: 1, offset: 0.2 },
+        { transform: 'scale(1)', opacity: 1, offset: 0.3 },
+        { transform: 'scale(1)', opacity: 1, offset: 0.85 },
+        { transform: 'scale(0.9)', opacity: 0, offset: 1 }
+      ], { duration: 1400 }).finished;
+    }
+
+    function createCapsule() {
+      const capsule = document.createElement('div');
+      capsule.className = 'capsule';
+      capsule.innerHTML = '<span class="capsule-top"></span><span class="capsule-bottom"></span>';
+      const color = capsuleColors[randomInt(capsuleColors.length)];
+      capsule.style.setProperty('--cap', color);
+      return capsule;
+    }
+
+    // 取出口からカプセルが落ちてきて、ぱかっと開いて番号の玉が出る
+    async function revealSlot(slot) {
+      const ballWrap = slot.querySelector('.ball-wrap');
+      const ball = slot.querySelector('.ball');
+      const badge = slot.querySelector('.order-badge');
+      const capsule = createCapsule();
+      ballWrap.appendChild(capsule);
+
+      // 取出口の位置から、この玉の位置まで落とす
+      const from = outlet.getBoundingClientRect();
+      const to = ballWrap.getBoundingClientRect();
+      const dx = (from.left + from.width / 2) - (to.left + to.width / 2);
+      const dy = (from.top + from.height / 2) - (to.top + to.height / 2);
+
+      await capsule.animate([
+        { transform: `translate(${dx}px, ${dy}px) scale(0.5)`, opacity: 0, offset: 0 },
+        { transform: `translate(${dx}px, ${dy + 14}px) scale(0.55)`, opacity: 1, offset: 0.12, easing: 'ease-in' },
+        { transform: 'translate(0, 0) scale(1)', opacity: 1, offset: 0.6, easing: 'ease-out' },
+        { transform: 'translate(0, -22px) scale(1)', opacity: 1, offset: 0.78, easing: 'ease-in' },
+        { transform: 'translate(0, 0) scale(1)', opacity: 1, offset: 1 }
+      ], { duration: 850, fill: 'forwards' }).finished;
+
+      await capsule.animate([
+        { transform: 'rotate(0deg)' },
+        { transform: 'rotate(-9deg)' },
+        { transform: 'rotate(8deg)' },
+        { transform: 'rotate(-5deg)' },
+        { transform: 'rotate(0deg)' }
+      ], { duration: 500, fill: 'forwards' }).finished;
+
+      const opening = { duration: 600, easing: 'ease-out', fill: 'forwards' };
+      capsule.querySelector('.capsule-top').animate([
+        { transform: 'none', opacity: 1 },
+        { transform: 'translate(-14px, -48px) rotate(-30deg)', opacity: 0 }
+      ], opening);
+      capsule.querySelector('.capsule-bottom').animate([
+        { transform: 'none', opacity: 1 },
+        { transform: 'translate(12px, 34px) rotate(18deg)', opacity: 0 }
+      ], opening);
+
+      slot.classList.remove('is-pending');
+      if (badge) {
+        badge.animate([
+          { opacity: 0, transform: 'translate(-50%, 8px)' },
+          { opacity: 1, transform: 'translate(-50%, 0)' }
+        ], { duration: 350, delay: 350, easing: 'ease-out', fill: 'backwards' });
+      }
+      await ball.animate([
+        { transform: 'scale(0.35)', opacity: 0 },
+        { transform: 'scale(1)', opacity: 1 }
+      ], { duration: 600, easing: 'cubic-bezier(.3, 1.5, .5, 1)' }).finished;
+
+      capsule.remove();
+    }
+
+    async function fadeIn(element) {
+      element.classList.remove('is-pending');
+      await element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300 }).finished;
+    }
+
+    let busy = false;
+    function setBusy(value) {
+      busy = value;
+      handle.disabled = value || isFinished();
+      handle.classList.toggle('is-turning', value);
+      resetButton.disabled = value;
+    }
+
+    function describe(round) {
+      if (round.length === 2) {
+        return '2倍です。1個目は' + round[0] + '番、2個目は' + round[1] + '番です。';
+      }
+      return round[0] + '番が出ました。';
+    }
+
+    // ---------- ボタンの動き ----------
+    handle.addEventListener('click', async () => {
+      if (busy || isFinished()) {
+        return;
+      }
+      setBusy(true);
+      // 結果は最初に確定して保存する（演出中に画面を閉じても、結果は失われない）
+      const round = draw();
+
+      try {
+        // いま表示している玉をしまう
+        result.querySelectorAll('.slot, .priority-note').forEach((el) => {
+          el.animate([
+            { transform: 'scale(1)', opacity: 1 },
+            { transform: 'scale(0.6)', opacity: 0 }
+          ], { duration: 250, fill: 'forwards' });
+        });
+
+        if (reduceMotion) {
+          await wait(1500);
+        } else {
+          await turnHandle();
+        }
+
+        // 出た玉を、隠した状態で並べておく
+        result.innerHTML = resultHtml(round);
+        const slots = Array.from(result.querySelectorAll('.slot'));
+        const note = result.querySelector('.priority-note');
+        slots.forEach((slot) => slot.classList.add('is-pending'));
+        if (note) {
+          note.classList.add('is-pending');
+        }
+
+        if (slots.length === 2 && !reduceMotion) {
+          await showDoubleFlash();
+        }
+        // 1個目 → 2個目の順に出す
+        for (const slot of slots) {
+          if (reduceMotion) {
+            await fadeIn(slot);
+          } else {
+            await revealSlot(slot);
+          }
+        }
+        if (note) {
+          await fadeIn(note);
+        }
+      } finally {
+        // 演出が途中で失敗しても、最新の状態で画面を描き直す
+        renderAll();
+        setBusy(false);
+        status.textContent = describe(round);
+      }
+    });
+
+    reachButton.addEventListener('click', () => {
+      state.reach = !state.reach;
+      saveState();
+      renderReach();
+      status.textContent = state.reach ? 'リーチ中です。' : 'リーチを解除しました。';
+    });
+
+    resetButton.addEventListener('click', () => {
+      if (!confirm('出た番号とリーチをすべて消して、最初からやり直しますか？')) {
+        return;
+      }
+      state = freshState();
+      saveState();
+      renderAll();
+      status.textContent = 'リセットしました。';
+    });
+
+    renderAll();
+  })();
+</script>
+</body>
+</html>
