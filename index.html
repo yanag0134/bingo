@@ -30,6 +30,10 @@
       --metal-light: #ffffff;
       --metal: #c9d1dc;
       --metal-dark: #8390a4;
+      --gold: #ffcf3a;
+
+      /* リーチの帯の太さ */
+      --band-h: clamp(44px, 10vmin, 120px);
       color-scheme: light;
     }
     @media (prefers-color-scheme: dark) {
@@ -45,18 +49,17 @@
         color-scheme: dark;
       }
     }
-
     :root[data-theme="dark"] {
-        --bg: #16203a;
-        --panel: #1f2b4a;
-        --ink: #eef2f8;
-        --ink-soft: #a9b4cc;
-        --chip: #2c3a5e;
-        --double: #a585ff;
-        --dome: rgba(255, 255, 255, 0.14);
-        --dome-edge: #50618a;
-        color-scheme: dark;
-      }
+      --bg: #16203a;
+      --panel: #1f2b4a;
+      --ink: #eef2f8;
+      --ink-soft: #a9b4cc;
+      --chip: #2c3a5e;
+      --double: #a585ff;
+      --dome: rgba(255, 255, 255, 0.14);
+      --dome-edge: #50618a;
+      color-scheme: dark;
+    }
 
     :root {
       box-sizing: border-box;
@@ -65,6 +68,7 @@
     }
     html {
       height: 100%;
+      overflow: hidden;
       scroll-padding-top: env(safe-area-inset-top, 0px);
       background: var(--bg);
     }
@@ -72,12 +76,12 @@
     body {
       margin: 0;
       height: 100%;
+      overflow: hidden;
       background: var(--bg);
       color: var(--ink);
       font-family: "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", "Meiryo", sans-serif;
       font-weight: 500;
       line-height: 1.6;
-      overflow-x: hidden;
     }
     .sr-only {
       position: absolute;
@@ -88,25 +92,34 @@
       white-space: nowrap;
     }
 
-    /* 左：ガチャガチャ / 右端：出た番号の一覧 */
+    /* 横画面（スクリーン投影）：左にガチャと玉、右端に出た番号の一覧 */
     .layout {
       display: grid;
-      grid-template-columns: 1fr 300px;
-      min-height: 100%;
+      grid-template-columns: minmax(0, 1fr) clamp(250px, 25vw, 460px);
+      grid-template-rows: minmax(0, 1fr);
+      height: 100%;
     }
 
     .stage {
+      /* ガチャ本体の大きさの基準。画面の高さと、この領域の幅の両方に収まるように伸び縮みする */
+      --u: min(0.16vh, 0.133cqw);
+      container-type: inline-size;
+      position: relative;
+      z-index: 30;
+      min-width: 0;
+      overflow: hidden;
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
       align-items: center;
       justify-content: center;
-      gap: 1.25rem;
-      padding: 2rem 1rem;
+      gap: min(5vmin, 3cqw);
+      padding: 3vmin;
+      padding-left: max(3vmin, env(safe-area-inset-left, 0px));
     }
 
     /* ---------- ガチャガチャ本体 ---------- */
     .machine {
-      position: relative;
+      flex-shrink: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -114,11 +127,11 @@
     .dome {
       position: relative;
       z-index: 1;
-      width: 200px;
+      width: calc(200 * var(--u));
       aspect-ratio: 1;
-      margin-bottom: -40px;
+      margin-bottom: calc(-40 * var(--u));
       border-radius: 50%;
-      border: 4px solid var(--dome-edge);
+      border: calc(4 * var(--u)) solid var(--dome-edge);
       background: radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.95), var(--dome) 42%);
       overflow: hidden;
     }
@@ -129,41 +142,40 @@
     .pile span {
       --c: #d7263d; /* 既定の色。HTML側の style="--c:..." で1つずつ上書きする */
       position: absolute;
-      width: 44px;
-      height: 44px;
+      width: 22%;
+      height: 22%;
       border-radius: 50%;
       background: linear-gradient(to bottom, var(--c) 50%, #ffffff 50%);
-      box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.15);
+      box-shadow: inset 0 calc(-3 * var(--u)) 0 rgba(0, 0, 0, 0.08), 0 calc(1 * var(--u)) calc(2 * var(--u)) rgba(0, 0, 0, 0.15);
     }
     .cabinet {
       position: relative;
       z-index: 2;
-      width: 240px;
-      height: 230px;
-      padding-top: 10px;
+      width: calc(240 * var(--u));
+      height: calc(230 * var(--u));
+      padding-top: calc(10 * var(--u));
       display: flex;
       flex-direction: column;
       align-items: center;
-      border-radius: 24px 24px 14px 14px;
+      border-radius: calc(24 * var(--u)) calc(24 * var(--u)) calc(14 * var(--u)) calc(14 * var(--u));
       background: linear-gradient(to bottom, var(--machine-light), var(--machine) 16%, var(--machine-dark));
-      box-shadow: 0 18px 26px -14px rgba(20, 40, 90, 0.6);
+      box-shadow: 0 calc(18 * var(--u)) calc(26 * var(--u)) calc(-14 * var(--u)) rgba(20, 40, 90, 0.6);
     }
-    .handle-form { margin: 0; }
 
     /* ハンドル（このボタンを押すとガチャが回る） */
     .handle {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 0.3rem;
-      padding: 0.25rem 0.75rem 0.4rem;
+      gap: calc(5 * var(--u));
+      padding: calc(4 * var(--u)) calc(12 * var(--u)) calc(6 * var(--u));
       border: none;
-      border-radius: 18px;
+      border-radius: calc(18 * var(--u));
       background: none;
       color: #ffffff;
       font: inherit;
       font-weight: 800;
-      font-size: 1rem;
+      font-size: max(0.75rem, calc(16 * var(--u)));
       cursor: pointer;
       touch-action: manipulation;
     }
@@ -173,8 +185,8 @@
     .handle:disabled:not(.is-turning) { opacity: 0.45; }
     .knob-area {
       position: relative;
-      width: 128px;
-      height: 128px;
+      width: calc(128 * var(--u));
+      height: calc(128 * var(--u));
       display: grid;
       place-items: center;
     }
@@ -186,75 +198,56 @@
       opacity: 0.55;
     }
     .knob {
-      width: 88px;
-      height: 88px;
+      width: calc(88 * var(--u));
+      height: calc(88 * var(--u));
       display: grid;
       place-items: center;
       border-radius: 50%;
       background: radial-gradient(circle at 36% 30%, var(--metal-light), var(--metal) 55%, var(--metal-dark));
-      box-shadow: 0 4px 0 rgba(0, 0, 0, 0.28), inset 0 -4px 6px rgba(0, 0, 0, 0.18);
+      box-shadow: 0 calc(4 * var(--u)) 0 rgba(0, 0, 0, 0.28), inset 0 calc(-4 * var(--u)) calc(6 * var(--u)) rgba(0, 0, 0, 0.18);
       transition: transform 200ms ease;
     }
     .handle:not(:disabled):hover .knob { transform: rotate(20deg); }
     .grip {
-      width: 76px;
-      height: 24px;
-      border-radius: 12px;
+      width: calc(76 * var(--u));
+      height: calc(24 * var(--u));
+      border-radius: calc(12 * var(--u));
       background: linear-gradient(to bottom, #ffffff, var(--metal) 55%, var(--metal-dark));
-      box-shadow: 0 3px 4px rgba(0, 0, 0, 0.32);
+      box-shadow: 0 calc(3 * var(--u)) calc(4 * var(--u)) rgba(0, 0, 0, 0.32);
     }
     .outlet {
       margin-top: auto;
-      margin-bottom: 16px;
-      width: 96px;
-      height: 54px;
-      border-radius: 14px 14px 10px 10px;
+      margin-bottom: calc(16 * var(--u));
+      width: calc(96 * var(--u));
+      height: calc(54 * var(--u));
+      border-radius: calc(14 * var(--u)) calc(14 * var(--u)) calc(10 * var(--u)) calc(10 * var(--u));
       background: #0f1c38;
-      box-shadow: inset 0 6px 10px rgba(0, 0, 0, 0.6);
+      box-shadow: inset 0 calc(6 * var(--u)) calc(10 * var(--u)) rgba(0, 0, 0, 0.6);
       overflow: hidden;
     }
     .outlet::before {
       content: "";
       display: block;
-      height: 20px;
+      height: calc(20 * var(--u));
       background: rgba(255, 255, 255, 0.16);
     }
 
-    /* 2倍に当たったときに一瞬出る表示 */
-    .double-flash {
-      position: absolute;
-      z-index: 5;
-      top: 64px;
-      left: 0;
-      right: 0;
-      width: max-content;
-      margin: 0 auto;
-      padding: 0.35rem 1.4rem 0.45rem;
-      border-radius: 999px;
-      background: var(--double);
-      color: #ffffff;
-      text-align: center;
-      line-height: 1.2;
-      box-shadow: 0 10px 22px -8px rgba(60, 20, 140, 0.6);
-      opacity: 0;
-      pointer-events: none;
-    }
-    .double-flash strong { display: block; font-size: 2.2rem; font-weight: 800; }
-    .double-flash span { font-size: 0.95rem; font-weight: 800; }
-
     /* ---------- 出てきた玉 ---------- */
     .result {
-      min-height: 250px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 0.9rem;
+      gap: 2.5vmin;
     }
     .balls {
+      /* 1個のときの玉の大きさ */
+      --ball-size: min(60vh, 50cqw);
       display: flex;
       align-items: flex-end;
-      gap: 1.5rem;
+      gap: min(4vmin, 3cqw);
     }
+    /* 2個のときは、2つとも同じ大きさにそろえる */
+    .balls.is-double { --ball-size: min(42vh, 27cqw); }
     .slot {
       position: relative;
       display: flex;
@@ -263,10 +256,9 @@
     }
     .ball-wrap {
       position: relative;
-      width: 180px;
+      width: var(--ball-size);
       aspect-ratio: 1;
     }
-    .slot-second .ball-wrap { width: 128px; }
     .ball {
       width: 100%;
       height: 100%;
@@ -274,7 +266,7 @@
       place-items: center;
       border-radius: 50%;
       background: radial-gradient(circle at 32% 28%, var(--ball-light), var(--ball) 55%, var(--ball-dark));
-      box-shadow: 0 16px 26px -12px rgba(143, 20, 36, 0.55);
+      box-shadow: 0 calc(var(--ball-size) * 0.08) calc(var(--ball-size) * 0.14) calc(var(--ball-size) * -0.06) rgba(143, 20, 36, 0.55);
     }
     .ball.is-empty { filter: grayscale(0.85); opacity: 0.5; }
     .ball-face {
@@ -285,24 +277,24 @@
       border-radius: 50%;
       background: var(--face);
       color: #1d2b4a;
-      font-size: 4rem;
+      font-size: calc(var(--ball-size) * 0.34);
       font-weight: 800;
       line-height: 1;
       font-variant-numeric: tabular-nums;
+      letter-spacing: -0.03em;
     }
-    .slot-second .ball-face { font-size: 2.8rem; }
 
     /* 2個出たときの順番（1個目が優先） */
     .order-badge {
       position: absolute;
       z-index: 2;
-      top: -14px;
+      top: calc(var(--ball-size) * -0.07);
       left: 50%;
       transform: translateX(-50%);
       margin: 0;
-      padding: 0.15rem 0.8rem;
+      padding: 0.15em 0.9em;
       border-radius: 999px;
-      font-size: 0.9rem;
+      font-size: max(0.85rem, calc(var(--ball-size) * 0.075));
       font-weight: 800;
       white-space: nowrap;
     }
@@ -313,18 +305,18 @@
     .slot-second .order-badge {
       background: var(--panel);
       color: var(--double);
-      box-shadow: inset 0 0 0 2px var(--double);
+      box-shadow: inset 0 0 0 0.12em var(--double);
     }
     .priority-note {
-      max-width: 22rem;
+      max-width: min(100%, 32em);
       margin: 0;
-      padding: 0.5rem 1rem;
-      border-radius: 12px;
+      padding: 0.5em 1.1em;
+      border-radius: 0.8em;
       background: var(--panel);
       color: var(--ink);
-      font-size: 0.95rem;
+      font-size: clamp(0.85rem, 2.4vmin, 1.7rem);
       text-align: center;
-      box-shadow: inset 0 0 0 2px var(--double);
+      box-shadow: inset 0 0 0 0.13em var(--double);
     }
     .priority-note strong { color: var(--double); }
 
@@ -341,8 +333,10 @@
       left: 15%;
       width: 70%;
       height: 70%;
+      border-radius: 50%;
       pointer-events: none;
     }
+    .capsule.is-gold { box-shadow: 0 0 calc(var(--ball-size) * 0.12) calc(var(--ball-size) * 0.03) rgba(255, 207, 58, 0.85); }
     .capsule-top,
     .capsule-bottom {
       position: absolute;
@@ -359,35 +353,81 @@
       bottom: 0;
       border-radius: 0 0 999px 999px;
       background: linear-gradient(to bottom, #ffffff, #dce3ec);
-      border-top: 3px solid rgba(0, 0, 0, 0.1);
+      border-top: calc(var(--ball-size) * 0.012) solid rgba(0, 0, 0, 0.1);
+    }
+
+    /* ---------- 2倍のときの演出用レイヤー ---------- */
+    .fx-dim,
+    .fx-flash,
+    .fx-particles,
+    .fx-rays {
+      position: fixed;
+      pointer-events: none;
+      opacity: 0;
+    }
+    .fx-dim {
+      z-index: 20;
+      inset: 0;
+      background: rgba(6, 10, 30, 0.82);
+    }
+    .fx-rays {
+      z-index: 25;
+      left: 50%;
+      top: 50%;
+      width: 170vmax;
+      height: 170vmax;
+      transform: translate(-50%, -50%);
+      background: repeating-conic-gradient(from 0deg, rgba(255, 214, 90, 0.55) 0deg 7deg, rgba(255, 214, 90, 0) 7deg 18deg);
+      -webkit-mask-image: radial-gradient(circle, #000 0, #000 8%, transparent 42%);
+      mask-image: radial-gradient(circle, #000 0, #000 8%, transparent 42%);
+    }
+    .fx-flash {
+      z-index: 60;
+      inset: 0;
+      background: #ffffff;
+    }
+    .fx-particles {
+      z-index: 55;
+      inset: 0;
+      overflow: hidden;
+      opacity: 1;
+    }
+    .fx-piece {
+      position: absolute;
+      left: 0;
+      top: 0;
     }
 
     /* ---------- リーチ中の帯 ---------- */
+    /* 帯は、ガチャと玉が並ぶ領域（一覧を除いた部分）の右上・左下に出す */
     .reach-band {
-      position: fixed;
+      position: absolute;
       z-index: 50;
-      width: 560px;
-      height: 48px;
+      width: 160vmin;
+      height: var(--band-h);
       display: none;
       align-items: center;
       overflow: hidden;
       background: linear-gradient(to bottom, var(--reach), var(--reach-dark));
-      border-top: 3px solid rgba(255, 255, 255, 0.7);
-      border-bottom: 3px solid rgba(255, 255, 255, 0.7);
+      border-top: calc(var(--band-h) * 0.07) solid rgba(255, 255, 255, 0.75);
+      border-bottom: calc(var(--band-h) * 0.07) solid rgba(255, 255, 255, 0.75);
       color: #ffffff;
-      font-size: 1.2rem;
+      font-size: calc(var(--band-h) * 0.46);
       font-weight: 800;
-      box-shadow: 0 8px 18px -6px rgba(120, 10, 50, 0.55);
+      letter-spacing: 0.08em;
+      text-shadow: 0 0.06em 0 rgba(120, 10, 50, 0.6);
+      box-shadow: 0 1vmin 2.4vmin -0.6vmin rgba(120, 10, 50, 0.55);
       pointer-events: none;
     }
+    /* 帯の中心を、角から内側へ寄せる */
     .reach-band.top-right {
-      top: 40px;
-      right: -194px;
+      top: calc(14vmin - var(--band-h) / 2);
+      right: calc(14vmin - 80vmin);
       transform: rotate(45deg);
     }
     .reach-band.bottom-left {
-      bottom: 40px;
-      left: -194px;
+      bottom: calc(14vmin - var(--band-h) / 2);
+      left: calc(14vmin - 80vmin);
       transform: rotate(45deg);
     }
     body.is-reach .reach-band {
@@ -398,9 +438,9 @@
       display: flex;
       flex-shrink: 0;
       white-space: nowrap;
-      animation: reach-flow 7s linear infinite;
+      animation: reach-flow 8s linear infinite;
     }
-    .reach-track span { padding: 0 1.2rem; }
+    .reach-track span { padding: 0 0.9em; }
     @keyframes reach-flow {
       from { transform: translateX(0); }
       to   { transform: translateX(-50%); }
@@ -416,39 +456,53 @@
 
     /* ---------- 出た番号の一覧 ---------- */
     .history {
+      min-height: 0;
+      overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 1rem;
-      padding: 1.5rem 1.25rem;
+      gap: 1.5vmin;
+      padding: 3vmin 2.5vmin 0;
+      padding-right: max(2.5vmin, env(safe-area-inset-right, 0px));
       background: var(--panel);
       border-left: 1px solid var(--chip);
     }
     .history h1 {
       margin: 0;
-      font-size: 1.3rem;
+      font-size: clamp(1rem, 2.8vmin, 2.1rem);
       font-weight: 800;
+      line-height: 1.3;
     }
     #history-dynamic {
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
+      gap: 1vmin;
     }
-    .progress { margin: 0; color: var(--ink-soft); }
-    .progress strong { color: var(--ink); font-size: 1.4rem; }
-    .notice { margin: 0; font-weight: 800; }
+    .progress {
+      margin: 0;
+      color: var(--ink-soft);
+      font-size: clamp(0.9rem, 2.4vmin, 1.6rem);
+      line-height: 1.2;
+    }
+    .progress strong {
+      color: var(--ink);
+      font-size: clamp(1.4rem, 6.5vmin, 4.6rem);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+    .notice { margin: 0; font-weight: 800; font-size: clamp(0.85rem, 2vmin, 1.3rem); }
     .history h2 {
-      margin: 0.75rem 0 0.25rem;
-      font-size: 1.05rem;
+      margin: 1vmin 0 0.4vmin;
+      font-size: clamp(0.9rem, 2.3vmin, 1.5rem);
     }
-    .history h2 small { color: var(--ink-soft); font-weight: 500; }
-    .history-empty { margin: 0; color: var(--ink-soft); font-size: 0.95rem; }
+    .history h2 small { color: var(--ink-soft); font-weight: 500; font-size: 0.8em; }
+    .history-empty { margin: 0; color: var(--ink-soft); font-size: clamp(0.85rem, 2vmin, 1.3rem); }
     .history-list {
       list-style: none;
       margin: 0;
       padding: 0;
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 0.6rem;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 0.9vmin;
     }
     .history-list li {
       position: relative;
@@ -457,6 +511,7 @@
       place-items: center;
       border-radius: 50%;
       background: var(--chip);
+      font-size: clamp(0.8rem, 2.2vmin, 1.5rem);
       font-weight: 800;
       font-variant-numeric: tabular-nums;
     }
@@ -465,203 +520,157 @@
       color: #1d2b4a;
     }
     /* 2倍で同時に出た番号：紫の枠と、出た順の小さな数字 */
-    .history-list li[data-order] { box-shadow: inset 0 0 0 3px var(--double); }
+    .history-list li[data-order] { box-shadow: inset 0 0 0 0.16em var(--double); }
     .history-list li[data-order]::after {
       content: attr(data-order);
       position: absolute;
-      top: -5px;
-      left: -5px;
-      width: 19px;
-      height: 19px;
+      top: -0.25em;
+      left: -0.25em;
+      width: 1.6em;
+      height: 1.6em;
       display: grid;
       place-items: center;
       border-radius: 50%;
       background: var(--double);
       color: #ffffff;
-      font-size: 0.7rem;
+      font-size: 0.6em;
       line-height: 1;
     }
     .history-legend {
-      margin: 0.25rem 0 0;
+      margin: 0.5vmin 0 0;
       color: var(--ink-soft);
-      font-size: 0.85rem;
+      font-size: clamp(0.7rem, 1.7vmin, 1.1rem);
+      line-height: 1.5;
     }
 
     .controls {
+      position: sticky;
+      bottom: 0;
       margin-top: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 0.6rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1vmin;
+      padding: 1.5vmin 0 2.5vmin;
+      background: var(--panel);
     }
-    .controls form { margin: 0; }
     .controls button {
-      width: 100%;
-      padding: 0.7rem 1rem;
+      padding: 0.6em 0.5em;
       border: none;
       border-radius: 999px;
       font: inherit;
+      font-size: clamp(0.85rem, 2.2vmin, 1.4rem);
       font-weight: 800;
+      white-space: nowrap;
       cursor: pointer;
       touch-action: manipulation;
     }
     .controls button:focus-visible { outline: 3px solid var(--latest); outline-offset: 3px; }
     .controls button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .controls .is-wide { grid-column: 1 / -1; }
     .btn-reach {
       background: transparent;
       color: var(--reach);
-      box-shadow: inset 0 0 0 2px var(--reach);
-      font-size: 1.05rem;
+      box-shadow: inset 0 0 0 0.13em var(--reach);
     }
     .btn-reach[aria-pressed="true"] {
       background: var(--reach);
       color: #ffffff;
     }
-    .btn-reset {
+    .btn-reset,
+    .btn-fullscreen {
       background: transparent;
-      box-shadow: inset 0 0 0 2px var(--chip);
+      box-shadow: inset 0 0 0 0.13em var(--chip);
       color: var(--ink-soft);
     }
 
-    /* スマホでは一覧を下に回し、ガチャと玉を少し小さくする */
-    @media (max-width: 720px) {
-      .layout { grid-template-columns: 1fr; }
-      .stage { padding: 1rem 0.75rem 1.5rem; gap: 0.5rem; justify-content: flex-start; }
-      .machine-scale { transform: scale(0.8); transform-origin: top center; margin-bottom: -78px; }
-      .result { min-height: 210px; }
-      .ball-wrap { width: 150px; }
-      .slot-second .ball-wrap { width: 106px; }
-      .ball-face { font-size: 3.3rem; }
-      .slot-second .ball-face { font-size: 2.3rem; }
-      .history { border-left: none; border-top: 1px solid var(--chip); }
-      .reach-band { width: 440px; }
-      .reach-band.top-right { top: 46px; right: -160px; }
-      .reach-band.bottom-left { bottom: 46px; left: -160px; }
+    /* 横画面でも幅の狭い機種（iPhone SE など）は、一覧を細くして玉と帯がぶつからないようにする */
+    @media (orientation: landscape) and (max-width: 740px) {
+      .layout { grid-template-columns: minmax(0, 1fr) 215px; }
+      .history-list { grid-template-columns: repeat(5, 1fr); }
+      .reach-band.top-right { top: calc(10.5vmin - var(--band-h) / 2); right: calc(10.5vmin - 80vmin); }
+      .reach-band.bottom-left { bottom: calc(10.5vmin - var(--band-h) / 2); left: calc(10.5vmin - 80vmin); }
     }
 
-    /* スマホ横画面：ガチャ・玉・一覧を横一列に並べ、スクロールなしで1画面に収める */
-    @media (orientation: landscape) and (max-height: 520px) {
-      html, body { overflow: hidden; }
+    /* ---------- 縦画面（スマホを縦に持ったとき） ---------- */
+    @media (orientation: portrait) {
+      html, body { overflow-x: hidden; overflow-y: auto; }
       .layout {
-        grid-template-columns: 1fr 260px;
-        grid-template-rows: minmax(0, 1fr);
-        height: 100%;
-        min-height: 0;
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+        height: auto;
+        min-height: 100%;
       }
       .stage {
-        flex-direction: row;
-        justify-content: center;
-        align-items: center;
-        gap: 1.5rem;
-        padding: 0.5rem 1rem;
-        padding-left: max(1rem, env(safe-area-inset-left, 0px));
+        --u: min(1px, 0.25cqw);
+        flex-direction: column;
+        justify-content: flex-start;
+        gap: 3vh;
+        padding: 3vh 4vw 4vh;
       }
-      .machine-scale {
-        transform: scale(0.72);
-        transform-origin: center;
-        margin: -55px -34px;
-      }
-      .result { min-height: 0; }
-      .ball-wrap { width: 150px; }
-      .slot-second .ball-wrap { width: 106px; }
-      .ball-face { font-size: 3.3rem; }
-      .slot-second .ball-face { font-size: 2.3rem; }
-      .priority-note { max-width: 17rem; padding: 0.4rem 0.75rem; font-size: 0.85rem; }
+      .balls { --ball-size: min(52cqw, 30vh); }
+      .balls.is-double { --ball-size: min(40cqw, 24vh); }
       .history {
-        min-height: 0;
-        overflow-y: auto;
-        gap: 0.5rem;
-        padding: 0.75rem 0.9rem 0;
-        padding-right: max(0.9rem, env(safe-area-inset-right, 0px));
-        border-top: none;
-        border-left: 1px solid var(--chip);
+        overflow: visible;
+        border-left: none;
+        border-top: 1px solid var(--chip);
+        padding: 3vh 5vw 0;
       }
-      .history h1 { font-size: 1.05rem; }
-      .progress strong { font-size: 1.15rem; }
-      .history h2 { margin: 0.25rem 0 0; font-size: 0.95rem; }
-      .history-list { grid-template-columns: repeat(6, 1fr); gap: 0.4rem; }
-      .history-list li { font-size: 0.85rem; }
-      .history-list li[data-order]::after { top: -4px; left: -4px; width: 15px; height: 15px; font-size: 0.6rem; }
-      .history-legend { font-size: 0.75rem; }
-      .controls {
-        position: sticky;
-        bottom: 0;
-        flex-direction: row;
-        gap: 0.5rem;
-        padding: 0.6rem 0 0.75rem;
-        background: var(--panel);
-      }
-      .controls button { flex: 1; padding: 0.55rem 0.4rem; font-size: 0.95rem; white-space: nowrap; }
-      .reach-band { width: 440px; height: 40px; font-size: 1rem; }
-      .reach-band.top-right { top: 12px; right: -157px; }
-      .reach-band.bottom-left { bottom: 12px; left: -157px; }
-    }
-
-    /* 横画面でも幅の狭い機種（iPhone SE など）は、玉と一覧を一回り小さくする */
-    @media (orientation: landscape) and (max-height: 520px) and (max-width: 740px) {
-      .layout { grid-template-columns: 1fr 220px; }
-      .stage { gap: 0.75rem; }
-      .ball-wrap { width: 120px; }
-      .slot-second .ball-wrap { width: 88px; }
-      .ball-face { font-size: 2.6rem; }
-      .slot-second .ball-face { font-size: 1.9rem; }
-      .balls { gap: 1rem; }
-      .history-list { grid-template-columns: repeat(5, 1fr); }
-      .controls button { font-size: 0.85rem; }
     }
   </style>
 </head>
 <body>
 
-<div class="reach-band top-right" aria-hidden="true">
-  <div class="reach-track">
-    <span>リーチ中</span><span>リーチ中</span><span>リーチ中</span><span>リーチ中</span>
-    <span>リーチ中</span><span>リーチ中</span><span>リーチ中</span><span>リーチ中</span>
-  </div>
-</div>
-<div class="reach-band bottom-left" aria-hidden="true">
-  <div class="reach-track">
-    <span>リーチ中</span><span>リーチ中</span><span>リーチ中</span><span>リーチ中</span>
-    <span>リーチ中</span><span>リーチ中</span><span>リーチ中</span><span>リーチ中</span>
-  </div>
-</div>
+<div class="fx-dim" id="fx-dim" aria-hidden="true"></div>
+<div class="fx-rays" id="fx-rays" aria-hidden="true"></div>
+<div class="fx-particles" id="fx-particles" aria-hidden="true"></div>
+<div class="fx-flash" id="fx-flash" aria-hidden="true"></div>
 
 <div class="layout">
 
   <main class="stage">
-    <div class="machine-scale">
-      <div class="machine" id="machine">
-        <div class="dome">
-          <div class="pile" id="pile" aria-hidden="true">
-            <span style="--c:#d7263d; left:14px;  bottom:22px; transform:rotate(25deg)"></span>
-            <span style="--c:#f5b700; left:52px;  bottom:12px; transform:rotate(-40deg)"></span>
-            <span style="--c:#2bb673; left:92px;  bottom:8px;  transform:rotate(70deg)"></span>
-            <span style="--c:#7a5cd6; left:132px; bottom:14px; transform:rotate(-15deg)"></span>
-            <span style="--c:#2e64c8; left:148px; bottom:52px; transform:rotate(110deg)"></span>
-            <span style="--c:#ff8a3d; left:30px;  bottom:60px; transform:rotate(-80deg)"></span>
-            <span style="--c:#2bb673; left:70px;  bottom:50px; transform:rotate(15deg)"></span>
-            <span style="--c:#d7263d; left:110px; bottom:48px; transform:rotate(-120deg)"></span>
-            <span style="--c:#f5b700; left:90px;  bottom:88px; transform:rotate(60deg)"></span>
-            <span style="--c:#7a5cd6; left:50px;  bottom:96px; transform:rotate(-30deg)"></span>
-          </div>
-        </div>
+    <div class="reach-band top-right" aria-hidden="true">
+      <div class="reach-track">
+        <span>リーチ中</span><span>リーチ中</span><span>リーチ中</span><span>リーチ中</span>
+        <span>リーチ中</span><span>リーチ中</span><span>リーチ中</span><span>リーチ中</span>
+        <span>リーチ中</span><span>リーチ中</span><span>リーチ中</span><span>リーチ中</span>
+      </div>
+    </div>
+    <div class="reach-band bottom-left" aria-hidden="true">
+      <div class="reach-track">
+        <span>リーチ中</span><span>リーチ中</span><span>リーチ中</span><span>リーチ中</span>
+        <span>リーチ中</span><span>リーチ中</span><span>リーチ中</span><span>リーチ中</span>
+        <span>リーチ中</span><span>リーチ中</span><span>リーチ中</span><span>リーチ中</span>
+      </div>
+    </div>
 
-        <div class="cabinet">
-          <button type="button" id="handle" class="handle">
-            <span class="knob-area" aria-hidden="true">
-              <svg class="turn-arrow" viewBox="0 0 128 128">
-                <path d="M 108.4 26.7 A 58 58 0 0 1 108.4 101.3" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
-                <path d="M 120.2 98.1 L 108.4 101.3 L 109.4 89.1" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <span class="knob" id="knob"><span class="grip"></span></span>
-            </span>
-            <span>ガチャを回す</span>
-          </button>
-          <div class="outlet" id="outlet" aria-hidden="true"></div>
+    <div class="machine" id="machine">
+      <div class="dome" id="dome">
+        <div class="pile" id="pile" aria-hidden="true">
+          <span style="--c:#d7263d; left:7%;  bottom:11%; transform:rotate(25deg)"></span>
+          <span style="--c:#f5b700; left:26%; bottom:6%;  transform:rotate(-40deg)"></span>
+          <span style="--c:#2bb673; left:46%; bottom:4%;  transform:rotate(70deg)"></span>
+          <span style="--c:#7a5cd6; left:66%; bottom:7%;  transform:rotate(-15deg)"></span>
+          <span style="--c:#2e64c8; left:74%; bottom:26%; transform:rotate(110deg)"></span>
+          <span style="--c:#ff8a3d; left:15%; bottom:30%; transform:rotate(-80deg)"></span>
+          <span style="--c:#2bb673; left:35%; bottom:25%; transform:rotate(15deg)"></span>
+          <span style="--c:#d7263d; left:55%; bottom:24%; transform:rotate(-120deg)"></span>
+          <span style="--c:#f5b700; left:45%; bottom:44%; transform:rotate(60deg)"></span>
+          <span style="--c:#7a5cd6; left:25%; bottom:48%; transform:rotate(-30deg)"></span>
         </div>
+      </div>
 
-        <p class="double-flash" id="double-flash" aria-hidden="true">
-          <strong>2倍！</strong><span>2個出ます</span>
-        </p>
+      <div class="cabinet" id="cabinet">
+        <button type="button" id="handle" class="handle">
+          <span class="knob-area" aria-hidden="true">
+            <svg class="turn-arrow" viewBox="0 0 128 128">
+              <path d="M 108.4 26.7 A 58 58 0 0 1 108.4 101.3" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+              <path d="M 120.2 98.1 L 108.4 101.3 L 109.4 89.1" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="knob" id="knob"><span class="grip"></span></span>
+          </span>
+          <span>ガチャを回す</span>
+        </button>
+        <div class="outlet" id="outlet" aria-hidden="true"></div>
       </div>
     </div>
 
@@ -674,8 +683,9 @@
     <h1>ビンゴ 1〜50</h1>
     <div id="history-dynamic"></div>
     <div class="controls">
-      <button type="button" class="btn-reach" id="reach-button" aria-pressed="false">リーチ</button>
+      <button type="button" class="btn-reach is-wide" id="reach-button" aria-pressed="false">リーチ</button>
       <button type="button" class="btn-reset" id="reset-button">リセット</button>
+      <button type="button" class="btn-fullscreen" id="fullscreen-button">全画面</button>
     </div>
   </aside>
 
@@ -683,7 +693,7 @@
 
 <script>
   (function () {
-    // ---------- 抽選のルール（Java版の BingoService と同じ） ----------
+    // ---------- 抽選のルール ----------
     const MIN_NUMBER = 1;
     const MAX_NUMBER = 50;
     const DOUBLE_CHANCE_DENOMINATOR = 10; // 2倍の当選確率 1/10
@@ -717,7 +727,7 @@
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       } catch (error) {
-        // 保存できない環境（プライベートブラウズなど）でも、抽選自体はそのまま続けられる
+        // 保存できない環境でも、抽選自体はそのまま続けられる
       }
     }
 
@@ -754,14 +764,20 @@
     const handle = document.getElementById('handle');
     const reachButton = document.getElementById('reach-button');
     const resetButton = document.getElementById('reset-button');
+    const fullscreenButton = document.getElementById('fullscreen-button');
     const machine = document.getElementById('machine');
+    const dome = document.getElementById('dome');
+    const cabinet = document.getElementById('cabinet');
     const pile = document.getElementById('pile');
     const knob = document.getElementById('knob');
     const outlet = document.getElementById('outlet');
-    const doubleFlash = document.getElementById('double-flash');
     const result = document.getElementById('result');
     const historyArea = document.getElementById('history-dynamic');
     const status = document.getElementById('status');
+    const fxDim = document.getElementById('fx-dim');
+    const fxRays = document.getElementById('fx-rays');
+    const fxFlash = document.getElementById('fx-flash');
+    const fxParticles = document.getElementById('fx-particles');
 
     function resultHtml(round) {
       if (round.length === 0) {
@@ -781,12 +797,12 @@
       const note = isDouble
           ? '<p class="priority-note">同時にビンゴになったときは、<strong>1個目</strong>の番号でビンゴになった人が優先です。</p>'
           : '';
-      return '<div class="balls">' + slots + '</div>' + note;
+      return '<div class="balls' + (isDouble ? ' is-double' : '') + '">' + slots + '</div>' + note;
     }
 
     function renderHistory() {
-      let html = '<p class="progress"><strong>' + drawnCount() + '</strong> / <span>'
-          + (MAX_NUMBER - MIN_NUMBER + 1) + '</span> 個 出ました</p>';
+      let html = '<p class="progress"><strong>' + drawnCount() + '</strong> / '
+          + (MAX_NUMBER - MIN_NUMBER + 1) + ' 個 出ました</p>';
       if (isFinished()) {
         html += '<p class="notice">50個すべて出ました。リセットすると最初からやり直せます。</p>';
       }
@@ -826,8 +842,15 @@
     // ---------- 演出 ----------
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const capsuleColors = ['#f5b700', '#2bb673', '#7a5cd6', '#ff8a3d', '#2e64c8', '#e84a8a'];
+    const partyColors = ['#ffcf3a', '#ff5a7a', '#5ad1ff', '#7cf08a', '#b28bff', '#ffffff'];
     const TURN_MS = 2400;
+    const RUMBLE_MS = 2200;
     const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    function centerOf(element) {
+      const rect = element.getBoundingClientRect();
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, width: rect.width };
+    }
 
     // ハンドルを「ガチャ、ガチャ」と2段階で1回転させ、本体と中の玉を揺らす
     function turnHandle() {
@@ -842,63 +865,179 @@
       machine.animate([
         { transform: 'none', offset: 0 },
         { transform: 'none', offset: 0.38 },
-        { transform: 'translateY(3px) rotate(-1.2deg)', offset: 0.42 },
+        { transform: 'translateY(0.4vmin) rotate(-1.2deg)', offset: 0.42 },
         { transform: 'none', offset: 0.5 },
         { transform: 'none', offset: 0.88 },
-        { transform: 'translateY(3px) rotate(1.2deg)', offset: 0.92 },
+        { transform: 'translateY(0.4vmin) rotate(1.2deg)', offset: 0.92 },
         { transform: 'none', offset: 1 }
       ], { duration: TURN_MS });
 
       pile.animate([
         { transform: 'rotate(0deg) translateY(0)' },
-        { transform: 'rotate(-6deg) translateY(-6px)' },
-        { transform: 'rotate(5deg) translateY(-2px)' },
-        { transform: 'rotate(-3deg) translateY(-5px)' },
+        { transform: 'rotate(-6deg) translateY(-3%)' },
+        { transform: 'rotate(5deg) translateY(-1%)' },
+        { transform: 'rotate(-3deg) translateY(-2.5%)' },
         { transform: 'rotate(0deg) translateY(0)' }
       ], { duration: TURN_MS / 2, iterations: 2, easing: 'ease-in-out' });
 
       return knobTurn.finished;
     }
 
-    // 2倍に当たったことを知らせる
-    function showDoubleFlash() {
-      return doubleFlash.animate([
-        { transform: 'scale(0.4)', opacity: 0, offset: 0 },
-        { transform: 'scale(1.15)', opacity: 1, offset: 0.2 },
-        { transform: 'scale(1)', opacity: 1, offset: 0.3 },
-        { transform: 'scale(1)', opacity: 1, offset: 0.85 },
-        { transform: 'scale(0.9)', opacity: 0, offset: 1 }
-      ], { duration: 1400 }).finished;
+    // 小さな光の粒を、指定した位置から四方へはじけさせる
+    function burst(x, y, count, reach) {
+      for (let i = 0; i < count; i++) {
+        const piece = document.createElement('span');
+        piece.className = 'fx-piece';
+        const size = 0.8 + Math.random() * 1.6; // vmin
+        const angle = Math.random() * Math.PI * 2;
+        const distance = reach * (0.45 + Math.random() * 0.55);
+        const color = partyColors[randomInt(partyColors.length)];
+        piece.style.width = size + 'vmin';
+        piece.style.height = size + 'vmin';
+        piece.style.background = color;
+        piece.style.borderRadius = Math.random() < 0.5 ? '50%' : '0.15vmin';
+        piece.style.boxShadow = '0 0 1.2vmin ' + color;
+        fxParticles.appendChild(piece);
+        const from = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
+        const to = `translate(${x + Math.cos(angle) * distance}px, ${y + Math.sin(angle) * distance}px) translate(-50%, -50%) rotate(${randomInt(540)}deg) scale(0.2)`;
+        piece.animate([
+          { transform: from + ' scale(1)', opacity: 1 },
+          { transform: to, opacity: 0 }
+        ], { duration: 900 + Math.random() * 600, easing: 'cubic-bezier(.12, .8, .3, 1)' })
+          .finished.then(() => piece.remove());
+      }
     }
 
-    function createCapsule() {
+    // 画面いっぱいに紙吹雪を降らせる（終わるのを待たない）
+    function confetti(count) {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      for (let i = 0; i < count; i++) {
+        const piece = document.createElement('span');
+        piece.className = 'fx-piece';
+        piece.style.width = (0.8 + Math.random() * 0.8) + 'vmin';
+        piece.style.height = (1.4 + Math.random() * 1.4) + 'vmin';
+        piece.style.background = partyColors[randomInt(partyColors.length)];
+        fxParticles.appendChild(piece);
+        const startX = Math.random() * width;
+        const drift = (Math.random() - 0.5) * width * 0.3;
+        const spin = 360 + randomInt(720);
+        piece.animate([
+          { transform: `translate(${startX}px, ${-height * 0.08}px) rotate(0deg)` },
+          { transform: `translate(${startX + drift}px, ${height * 1.08}px) rotate(${spin}deg)` }
+        ], {
+          duration: 2200 + Math.random() * 1600,
+          delay: Math.random() * 700,
+          easing: 'cubic-bezier(.25, .4, .6, 1)',
+          fill: 'backwards'
+        }).finished.then(() => piece.remove());
+      }
+    }
+
+    // 2倍の予兆：回し終えたあと、画面が暗くなり、本体が激しく震えて光り出す
+    let raysSpin = null;
+    async function doublePremonition() {
+      const center = centerOf(machine);
+      fxRays.style.left = center.x + 'px';
+      fxRays.style.top = center.y + 'px';
+
+      fxDim.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 500, fill: 'forwards' });
+      fxRays.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 900, fill: 'forwards' });
+      raysSpin = fxRays.animate([
+        { transform: 'translate(-50%, -50%) rotate(0deg)' },
+        { transform: 'translate(-50%, -50%) rotate(360deg)' }
+      ], { duration: 9000, iterations: Infinity });
+
+      // だんだん激しくなる震え
+      const shake = [];
+      const steps = 36;
+      for (let i = 0; i <= steps; i++) {
+        const power = i === steps ? 0 : 0.15 + (i / steps) * 0.9; // vmin
+        const x = (Math.random() - 0.5) * 2 * power;
+        const y = (Math.random() - 0.5) * 2 * power;
+        const r = (Math.random() - 0.5) * 2 * power * 1.6;
+        shake.push({ transform: `translate(${x}vmin, ${y}vmin) rotate(${r}deg)` });
+      }
+      machine.animate(shake, { duration: RUMBLE_MS, easing: 'linear' });
+
+      // 中のカプセルが跳ね回る
+      pile.animate([
+        { transform: 'translateY(0) rotate(0deg)' },
+        { transform: 'translateY(-14%) rotate(-10deg)' },
+        { transform: 'translateY(-4%) rotate(8deg)' },
+        { transform: 'translateY(-18%) rotate(-6deg)' },
+        { transform: 'translateY(0) rotate(0deg)' }
+      ], { duration: 360, iterations: Math.round(RUMBLE_MS / 360), easing: 'ease-in-out' });
+
+      // 本体・ドーム・取出口が光って脈打つ
+      const glow = '0 0 6vmin 1.6vmin rgba(255, 207, 58, 0.95)';
+      const calm = '0 0 0 0 rgba(255, 207, 58, 0)';
+      cabinet.animate([{ boxShadow: calm }, { boxShadow: glow }, { boxShadow: calm }],
+          { duration: RUMBLE_MS / 4, iterations: 4, easing: 'ease-in-out' });
+      dome.animate([{ boxShadow: calm }, { boxShadow: glow }, { boxShadow: calm }],
+          { duration: RUMBLE_MS / 4, iterations: 4, easing: 'ease-in-out', delay: RUMBLE_MS / 8 });
+      outlet.animate([{ background: '#0f1c38' }, { background: '#ffcf3a' }, { background: '#0f1c38' }],
+          { duration: RUMBLE_MS / 6, iterations: 6 });
+
+      // ハンドルがひとりでに勢いよく回り出す
+      await knob.animate([
+        { transform: 'rotate(0deg)' },
+        { transform: 'rotate(1080deg)' }
+      ], { duration: RUMBLE_MS, easing: 'cubic-bezier(.55, 0, .85, .35)' }).finished;
+
+      // 閃光と同時に、取出口から光がはじける
+      fxFlash.animate([{ opacity: 0 }, { opacity: 0.95, offset: 0.25 }, { opacity: 0 }], { duration: 550, easing: 'ease-out' });
+      const mouth = centerOf(outlet);
+      burst(mouth.x, mouth.y, 40, Math.max(window.innerWidth, window.innerHeight) * 0.35);
+      await wait(350);
+    }
+
+    async function endDoubleEffects() {
+      confetti(140);
+      await Promise.all([
+        fxDim.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 900, delay: 600, fill: 'forwards' }).finished,
+        fxRays.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 900, delay: 600, fill: 'forwards' }).finished
+      ]);
+      clearDoubleEffects();
+    }
+
+    function clearDoubleEffects() {
+      if (raysSpin) {
+        raysSpin.cancel();
+        raysSpin = null;
+      }
+      [fxDim, fxRays, fxFlash].forEach((el) => el.getAnimations().forEach((a) => a.cancel()));
+    }
+
+    function createCapsule(gold) {
       const capsule = document.createElement('div');
-      capsule.className = 'capsule';
+      capsule.className = 'capsule' + (gold ? ' is-gold' : '');
       capsule.innerHTML = '<span class="capsule-top"></span><span class="capsule-bottom"></span>';
-      const color = capsuleColors[randomInt(capsuleColors.length)];
+      const color = gold ? '#ffcf3a' : capsuleColors[randomInt(capsuleColors.length)];
       capsule.style.setProperty('--cap', color);
       return capsule;
     }
 
     // 取出口からカプセルが落ちてきて、ぱかっと開いて番号の玉が出る
-    async function revealSlot(slot) {
+    async function revealSlot(slot, gold) {
       const ballWrap = slot.querySelector('.ball-wrap');
       const ball = slot.querySelector('.ball');
       const badge = slot.querySelector('.order-badge');
-      const capsule = createCapsule();
+      const capsule = createCapsule(gold);
       ballWrap.appendChild(capsule);
 
-      // 取出口の位置から、この玉の位置まで落とす
-      const from = outlet.getBoundingClientRect();
-      const to = ballWrap.getBoundingClientRect();
-      const dx = (from.left + from.width / 2) - (to.left + to.width / 2);
-      const dy = (from.top + from.height / 2) - (to.top + to.height / 2);
+      // 取出口の位置から、この玉の位置まで落とす（取出口に収まる大きさから始める）
+      const from = centerOf(outlet);
+      const to = centerOf(ballWrap);
+      const dx = from.x - to.x;
+      const dy = from.y - to.y;
+      const startScale = Math.min(0.55, (outlet.getBoundingClientRect().width * 0.9) / capsule.getBoundingClientRect().width);
 
       await capsule.animate([
-        { transform: `translate(${dx}px, ${dy}px) scale(0.5)`, opacity: 0, offset: 0 },
-        { transform: `translate(${dx}px, ${dy + 14}px) scale(0.55)`, opacity: 1, offset: 0.12, easing: 'ease-in' },
+        { transform: `translate(${dx}px, ${dy}px) scale(${startScale})`, opacity: 0, offset: 0 },
+        { transform: `translate(${dx}px, ${dy + 10}px) scale(${startScale})`, opacity: 1, offset: 0.12, easing: 'ease-in' },
         { transform: 'translate(0, 0) scale(1)', opacity: 1, offset: 0.6, easing: 'ease-out' },
-        { transform: 'translate(0, -22px) scale(1)', opacity: 1, offset: 0.78, easing: 'ease-in' },
+        { transform: 'translate(0, -6%) scale(1)', opacity: 1, offset: 0.78, easing: 'ease-in' },
         { transform: 'translate(0, 0) scale(1)', opacity: 1, offset: 1 }
       ], { duration: 850, fill: 'forwards' }).finished;
 
@@ -908,22 +1047,27 @@
         { transform: 'rotate(8deg)' },
         { transform: 'rotate(-5deg)' },
         { transform: 'rotate(0deg)' }
-      ], { duration: 500, fill: 'forwards' }).finished;
+      ], { duration: gold ? 700 : 500, fill: 'forwards' }).finished;
 
       const opening = { duration: 600, easing: 'ease-out', fill: 'forwards' };
       capsule.querySelector('.capsule-top').animate([
         { transform: 'none', opacity: 1 },
-        { transform: 'translate(-14px, -48px) rotate(-30deg)', opacity: 0 }
+        { transform: 'translate(-12%, -40%) rotate(-30deg)', opacity: 0 }
       ], opening);
       capsule.querySelector('.capsule-bottom').animate([
         { transform: 'none', opacity: 1 },
-        { transform: 'translate(12px, 34px) rotate(18deg)', opacity: 0 }
+        { transform: 'translate(10%, 30%) rotate(18deg)', opacity: 0 }
       ], opening);
+
+      if (gold) {
+        const point = centerOf(ballWrap);
+        burst(point.x, point.y, 36, point.width * 0.9);
+      }
 
       slot.classList.remove('is-pending');
       if (badge) {
         badge.animate([
-          { opacity: 0, transform: 'translate(-50%, 8px)' },
+          { opacity: 0, transform: 'translate(-50%, 0.4em)' },
           { opacity: 1, transform: 'translate(-50%, 0)' }
         ], { duration: 350, delay: 350, easing: 'ease-out', fill: 'backwards' });
       }
@@ -948,9 +1092,10 @@
       resetButton.disabled = value;
     }
 
+    // 画面読み上げ用の説明（画面には表示しない）
     function describe(round) {
       if (round.length === 2) {
-        return '2倍です。1個目は' + round[0] + '番、2個目は' + round[1] + '番です。';
+        return '2個出ました。1個目は' + round[0] + '番、2個目は' + round[1] + '番です。';
       }
       return round[0] + '番が出ました。';
     }
@@ -963,6 +1108,7 @@
       setBusy(true);
       // 結果は最初に確定して保存する（演出中に画面を閉じても、結果は失われない）
       const round = draw();
+      const isDouble = round.length === 2;
 
       try {
         // いま表示している玉をしまう
@@ -988,22 +1134,26 @@
           note.classList.add('is-pending');
         }
 
-        if (slots.length === 2 && !reduceMotion) {
-          await showDoubleFlash();
+        if (isDouble && !reduceMotion) {
+          await doublePremonition();
         }
         // 1個目 → 2個目の順に出す
         for (const slot of slots) {
           if (reduceMotion) {
             await fadeIn(slot);
           } else {
-            await revealSlot(slot);
+            await revealSlot(slot, isDouble);
           }
         }
         if (note) {
           await fadeIn(note);
         }
+        if (isDouble && !reduceMotion) {
+          await endDoubleEffects();
+        }
       } finally {
         // 演出が途中で失敗しても、最新の状態で画面を描き直す
+        clearDoubleEffects();
         renderAll();
         setBusy(false);
         status.textContent = describe(round);
@@ -1026,6 +1176,24 @@
       renderAll();
       status.textContent = 'リセットしました。';
     });
+
+    // 全画面表示（対応していないブラウザではボタンを出さない）
+    if (document.fullscreenEnabled) {
+      const updateFullscreenLabel = () => {
+        fullscreenButton.textContent = document.fullscreenElement ? '全画面を終了' : '全画面';
+      };
+      fullscreenButton.addEventListener('click', () => {
+        if (document.fullscreenElement) {
+          document.exitFullscreen();
+        } else {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      });
+      document.addEventListener('fullscreenchange', updateFullscreenLabel);
+    } else {
+      fullscreenButton.hidden = true;
+      resetButton.classList.add('is-wide');
+    }
 
     renderAll();
   })();
